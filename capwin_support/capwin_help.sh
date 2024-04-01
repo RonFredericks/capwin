@@ -19,7 +19,7 @@ echo "\t-i [String] \tequivalent to --imgFormat"
 echo "\t   [String] A valid image format (file type)."
 
 echo ""
-echo "\t-c [String] \tequivalent to --imgCompression="
+echo "\t-c [String] \tequivalent to --imgCompression"
 echo "\t   [String] A valid image compression for image format used."
 
 echo ""

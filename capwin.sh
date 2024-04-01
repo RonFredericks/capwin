@@ -7,16 +7,16 @@
 #                  capwin_vars.sh (part of this package: 
 #                                  easy access to default variables)
 #                  UNLICENSE.txt (opensource license)
-#                  screencapture (part of MacOS distribution)
-#                  sips (part of MacOS distribution)
+#                  screencapture (part of macOS distribution)
+#                  sips (part of macOS distribution)
 # Type:            Z Shell (zsh) script
-# Creation date:   3/30/24
+# Creation date:   4/1/24
 # Platforms tested: 
 #                  Apple M1 Ultra, 
-#                       MacOS: Sonoma 14.4, and 
+#                       macOS: Sonoma 14.4, and 
 #                       zsh: 5.9
 #                  Apple iMac (21.5-inch, Late 2013) i5, 
-#                       MacOS: Sierra 10.12.6, and 
+#                       macOS: Sierra 10.12.6, and 
 #                       zsh: 5.2
 # Developer:       BiophysicsLab.com
 # License:         The Unlicense https://unlicense.org
@@ -298,7 +298,7 @@ while [[ "$#" -gt 0 ]]
     exit 0;;
 
     *) echo "\n${RED}Error: Unknown parameter passed:${NONE} $1"
-    source $(dirname $0)/capwin_help.sh
+    source $(dirname $0)/capwin_support/capwin_help.sh
     exit 1;;
   esac
 
@@ -320,9 +320,10 @@ echo "${CYAN}Image Configuration: \
     \n\tcompression: $imgCompression \
     \n\tdpi: $dpiImage \
     \n\tfilePath: $relativePath \
-    \n\tfilePrefex: $filePrefix \
+    \n\tfilePrefix: $filePrefix \
     \n\tfileSuffix: $fileSuffix (value changes/image) \
     \n\tborder shadow: $captureWithShadow \
+    \n\tmore configuration options: type capwin.sh --help
     ${NONE}"
 
 # Continue capturing images until any key EXCEPT y or Y is pressed.

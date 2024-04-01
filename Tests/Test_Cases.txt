@@ -1,0 +1,10 @@
+capwin.sh
+Test cases that exercise the command line options.
+Usage: Copy and paste one test case into the terminal.
+Last updated: 4/1/2024
+
+Test short-form command line options:
+capwin.sh -i tiff -c lzw -d 72 -s true -f ~/Downloads/ -p screenshot_
+
+Test equivalent long-form command line options:
+capwin.sh --imgFormat tiff --imgCompression lzw --dpiImage 72 --captureWithShadow true --filePath ~/Downloads/ --filePrefix screenshot_
