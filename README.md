@@ -87,6 +87,7 @@ Where `/users//ronfred/` is just an example representing your home path.
 #### Support image for Option 2 (mouse click from desktop or finder)
 
 First-time use right-clicking mouse:
+
 ![First-time use should use mouse double-click to get the "open" button](http://www.biophysicslab.com/wp-content/uploads/2024/04/Fix_First_Time_Use_Right_Mouse_Click.jpg)
 
 ### Dependencies
