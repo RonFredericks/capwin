@@ -1,7 +1,7 @@
 # File:			 capwin_help.sh
 # Purpose: 	 	 Display capwin.sh help options on terminal.
 # Distribution:  Part of the capwin.sh project.
-# Creation date: 3/14/2024
+# Creation date: 3/30/2024
 # Developer: 	 BiophysicsLab.com
 # License: 		 The Unlicense https://unlicense.org
 ###############################################################################

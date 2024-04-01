@@ -1,13 +1,16 @@
 #!/bin/zsh
 # File:            capwin.sh
 # Title:           Capture Windows Utility 
-# Purpose:         Manually capture many windowed images from monitors quickly.
-# Dependencies:    capwin_help.sh (part of this package)
+# Purpose:         Quickly capture many windowed images
+# Dependencies:    capwin_help.sh (part of this package:
+#                                  used to display command line options)
+#                  capwin_vars.sh (part of this package: 
+#                                  easy access to default variables)
 #                  UNLICENSE.txt (opensource license)
-#                  screencapture (part of Z Shell distribution)
-#                  sips (part of Z Shell distribution)
-# Type:            zsh script
-# Creation date:   3/08/24
+#                  screencapture (part of MacOS distribution)
+#                  sips (part of MacOS distribution)
+# Type:            Z Shell (zsh) script
+# Creation date:   3/30/24
 # Platforms tested: 
 #                  Apple M1 Ultra, 
 #                       MacOS: Sonoma 14.4, and 
@@ -25,12 +28,14 @@
 #
 # Use script from the terminal with support for image control arguments.
 #   Preparation:
-#       Copy script (capwin.sh and capwin_help.sh) to /usr/local/bin
+#       Copy script (capwin.sh and capwin_support directory) to /usr/local/bin
 #       Make script executable from terminal.
 #           chmod +x /usr/local/bin/capwin.sh
-#   Execution:
+#   Execution examples:
 #       Execute script with default arguments from any directory on terminal, 
 #           type: capwin.sh
+#       Execute script after replacing default dots-per-inch and image format,
+#           type: capwin.sh -d 72 -i tiff
 #       For help on available control arguments, 
 #           type: capwin.sh --help
 #
@@ -39,7 +44,7 @@
 #
 # Use finder to click and launch script with default options.
 #   Preparation:
-#       Copy script (capwin.sh and capwin_help.sh) to ~/Desktop
+#       Copy script (capwin.sh and capwin_support directory) to ~/Desktop
 #       Note: Using the desktop is my preference for a visual experience, 
 #           but any path will work.
 #       Make script executable from terminal.
@@ -49,8 +54,7 @@
 #                  it may not work.
 #       Make script executable from finder/desktop.
 #           Right Mouse Click over capwin.sh
-#           Use Get Info utility menu option to change 
-#               default launch application.
+#           Use Get Info menu option to change default launch application.
 #               Get Info -> Open with -> 
 #                   Other -> All Applications -> 
 #                   Utilities -> Terminal.app
@@ -58,11 +62,13 @@
 #                     as other scripts with extension .sh would then 
 #                     be affected.
 #   Execution:
-#       Execute script by double clicking on capwin.sh from finder or desktop.
+#       Execute script by double-clicking on capwin.sh from finder or desktop.
+#       Optionally change default control parameters by editing
+#           ./capwin_support/capwin_vars.sh
 
 
 ###############################################################################
-# Define string color definitions (i.e. for enhanced text display using echo)
+# Define string color definitions (i.e. for enhanced text display using echo).
 
 NONE='\033[00m'
 RED='\033[01;31m'
@@ -77,11 +83,16 @@ UNDERLINE='\033[4m'
 
 ###############################################################################
 # Function: absolute2RelativePathFunc()
-#           Convert absolute file path to relative file path with tilde (~)
-#           Input: file path with or without filename in absolute format
-#               Example: $1 contains "/Users/ronfred/Desktop/"
-#           Output: file path in ~ (relative) format using global relativePath
-#               Example: $relativePath contains "~/Desktop/"
+#           Convert absolute file path to relative file path containing tilde ~
+#           Input: File path with, or without, filename in absolute format.
+#
+#               Example: absolute2RelativePathFunc "/Users/ronfred/Desktop/"
+#
+#           Output: relativePath contains path with user's home directory 
+#                   replaced by tilde (~).
+#
+#               Example (continued): $relativePath contains "~/Desktop/"
+#
 #           On Error: Error message followed by exit 1
 absolute2RelativePathFunc() {
     local temp="$1"
@@ -102,9 +113,13 @@ absolute2RelativePathFunc() {
 # Function: relative2AbsolutePathFunc() {
 #           Convert tilde (~) shortcut path name to absolute path
 #           Input: A file path name with or without use of tilde (~)
+#
 #               Example: $1 contains "~/Desktop/"
-#           Output: file path absolute path format using global filePath
+#
+#           Output: filePath contains absolute path
+#
 #               Example: $filePath contains "/Users/ronfred/Desktop/"
+#
 #           On Error: Error message followed by exit 1
 relative2AbsolutePathFunc() {
     local temp="$1"
@@ -132,13 +147,14 @@ relative2AbsolutePathFunc() {
 
 ###############################################################################
 # Function: fileSuffixUpdate()
-#           Abstract file name suffix - the unique portion of image file name
+#           Generate file name suffix - the unique portion of image file name.
 #           Input: none
-#           Output: - fileSuffix should change value with each loop'ed call to 
-#                       screencapture
+#           Output: - fileSuffix variable should change value with each  
+#                       loop'ed call to screencapture
 #                   - result could be a date (default), or could be loop counter
-#                       with a few code changes for example
-#           Example: $fileSuffix contains $(date "+%Y%m%dT%H%M%S")
+#                       with some code changes for example
+#
+#               Example: $fileSuffix contains $(date "+%Y%m%dT%H%M%S")
 fileSuffixUpdate() {
     fileSuffix=$(date "+%Y%m%dT%H%M%S")
 }
@@ -146,9 +162,11 @@ fileSuffixUpdate() {
 
 ###############################################################################
 # Function: filePathTest()
-#           Test for valid file path entry
+#           Test for valid file path.
 #           Input: A file path name with or without use of tilde (~)
+#
 #               Example: $1 contains "~/Desktop/"
+#
 #           Output: n/a
 #           On Error: Error message followed by exit 1
 filePathTest(){
@@ -187,20 +205,40 @@ filePathTest(){
 
 ###############################################################################
 # Function: findInArray()
-#           Find an element in an array
+#           Find an element in an array.
 #           Inputs: String to find
 #                   Array of strings to search
-#           Output: Numeric index found
-#           On Error: Index no found error message followed by exit 1
+#           Output: indexFound variable contains numeric index found.
+#           On Error: Index not found error message, followed by exit 1
+#           Note: When called from a sourced module, error message is returned
+#                 in indexFound variable, and exit 1 condition does not stop 
+#                 program execution.
+#                 Instead, on return from findInArray, separate successful 
+#                 numeric index return value from  error message return value
+#                 using a test:
+# 
+#                   if [[ "$indexFound" = <-> ]] 
+#
+#                 after call to findInArray.
 #
 #       Example:
 #
 #           indexFound=$(findInArray $imgFormat imgFormatArray)
 #
-#           Where:
-#               findInArray is this function
-#               $imgFormat is a string to find
-#               imgFormatArray is an array of strings
+#       Example when called from sourced module:
+#
+#           # The pattern <-> matches any string having only numbers
+#           if [[ "$indexFound" = <-> ]]; then
+#               imgCompression=$imgCompressionArray[$indexFound]
+#           else
+#               echo $indexFound
+#               exit 1
+#           fi
+#
+#       Where:
+#           findInArray is this function
+#           $imgFormat is a string to find
+#           imgFormatArray is an array of strings
 findInArray(){
     local tempy=(${(P)2[@]})
     local indexFound="0"
@@ -220,61 +258,15 @@ findInArray(){
 
 
 ###############################################################################
-# Initialize array of screencapture image names
+# Initialize default parameters controlling image capture.
 
-screenShotsSaved=()
-
-
-###############################################################################
-# Initialize parameters to customize captured windows: 
-#   image type,
-#   image dpi,
-#   file path, 
-#   file base, 
-#   file suffix,
-#   border shadow
-
-# Define two arrays for use in the screencapture and sips command line tools
-# Use these same arrays to display parameter examples in the help system
-typeset -a imgFormatArray
-typeset -a imgCompressionArray
-imgFormatArray=(     jpeg   jpg    tiff tif      pdf     png     psd)
-imgCompressionArray=(low    normal lzw  packbits default default default)
-
-# Define image file format.
-imgFormat=jpg
-
-# Select image compression using findInArray along with 
-#   imgFormat, imgFormatArray and imgCompressionArray parameters
-indexFound=$(findInArray $imgFormat imgFormatArray)
-imgCompression=$imgCompressionArray[$indexFound]
-
-
-
-# Define final image dots per inch (density) for each image captured:
-#   web 72, 
-#   Apple studio monitor 144,
-#   printer 300
-dpiImage=144
-
-# Convert filePath with possible tilde (~) shortcut path to absolute path
-relative2AbsolutePathFunc "~/Desktop/"
-
-filePrefix="screen_"
-
-# Initialize fileSuffix for image configuration display
-fileSuffixUpdate
-
-#  screencapture window capture flags (options): 
-#                       false: -w  -> Window capture including image border
-#                       true -w -o -> Window capture without image border
-captureWithShadow=false
+source $(dirname $0)/capwin_support/capwin_vars.sh
 
 
 ###############################################################################
-# Initialize window selection user interface
+# Initialize window selection user interface from command line.
 
-# Allow parameter passing from terminal app
+# Allow parameter passing from terminal app by shifting through all entries.
 while [[ "$#" -gt 0 ]]
   do case $1 in
     -d|--dpiImage) dpiImage="$2"
@@ -302,7 +294,7 @@ while [[ "$#" -gt 0 ]]
     -s|--captureWithShadow) captureWithShadow="$2"
     shift;;
 
-    -h|--help) source $(dirname $0)/capwin_help.sh
+    -h|--help) source $(dirname $0)/capwin_support/capwin_help.sh
     exit 0;;
 
     *) echo "\n${RED}Error: Unknown parameter passed:${NONE} $1"
@@ -315,12 +307,12 @@ done
 
 
 ###############################################################################
-# Initialize User Display on Terminal
+# Display configuration parameters on terminal.
 
 echo ""
 echo "${PURPLE}Capture Windows Utility using screencapture and sips${NONE}"
 
-# Generate relativePath variable for easier display of file path using tilde(~)
+# Generate relativePath variable for display of file path using tilde(~).
 absolute2RelativePathFunc $filePath
 
 echo "${CYAN}Image Configuration: \
@@ -333,7 +325,7 @@ echo "${CYAN}Image Configuration: \
     \n\tborder shadow: $captureWithShadow \
     ${NONE}"
 
-# Continue capturing images until any key EXCEPT y or Y is pressed
+# Continue capturing images until any key EXCEPT y or Y is pressed.
 read -q ans"?Press [yY] key to capture an image:"
 if [[ "$ans" =~ ^[Yy]$ ]]
 then
@@ -347,6 +339,9 @@ fi
 
 ###############################################################################
 # Main loop to capture multiple images
+
+# Initialize array of screencapture image names for display at end of session.
+screenShotsSaved=()
 
 echo ""
 while true; do
@@ -408,11 +403,11 @@ while true; do
   fi
 
 
-  # Save each image file name into array for later display
+  # Push each image file name onto array for later display.
   screenShotsSaved+=($workingFileName.$imgFormat)
   
   
-  # Continue capturing images until any key EXCEPT y or Y is pressed
+  # Continue capturing images until any key EXCEPT y or Y is pressed.
   read -q  ans"?Press [yY] key to capture an image:"
   echo ""
   if [[ "$ans" =~ ^[Yy]$ ]]
@@ -427,7 +422,7 @@ done
 
 
 ###############################################################################
-# Display all captured screen image names
+# Display all captured screen image names.
 
 if [[ ${#screenShotsSaved} > 0 ]]; then
   echo "${CYAN}List screenshots captured:${NONE}"
