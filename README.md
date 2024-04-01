@@ -1,18 +1,18 @@
 # capwin - Mac Windows Capture
 
-Z Shell script to easily capture multiple windowed images using Mac built-in tools screencapture and sips.
+Z Shell script to easily capture multiple windowed images using Mac built-in tools *screencapture* and *sips*.
 
 ## Description
 
-The Mac built-in tools screencapture and Scriptable image processing system (sips) are poorly documented and have several gotcha's resulting in time delays to effective use. This script uses a subset of these tools for window capture and image manipulation, requiring only one click for each image captured. 
+The Mac built-in command line tools *screencapture* and *Scriptable Image Processing System* (sips) are poorly documented and have several gotcha's resulting in time delays to effective use. This script uses a subset of these tools for window capture and image manipulation, requiring only one click for each image captured. 
 
 Example as used from the command line: `capwin.sh`:
 
-![capwin.sh example as launched from the command line](http://www.biophysicslab.com/wp-content/uploads/2024/03/capwin_launched_from_terminal.jpg)
+![capwin.sh example as launched from the command line](http://www.biophysicslab.com/wp-content/uploads/2024/04/capwin_launched_from_terminal.jpg)
 
 Example as used from the command line: `capwin.sh --help`:
 
-![capwin.sh example as launched from the command line](http://www.biophysicslab.com/wp-content/uploads/2024/03/capwin_options_from_terminal.jpg)
+![capwin.sh example as launched from the command line](http://www.biophysicslab.com/wp-content/uploads/2024/04/capwin_options_from_terminal.jpg)
 
 Other options for window capture are available to the Mac user, including command key combinations that are hard for me to remember, and the screenshot utility, which has many options for multiple steps to save a captured window to a file in a desired format.
 
@@ -75,25 +75,40 @@ Where `/users//ronfred/` is just an example representing your home path.
 
 **Execution:**
 
- - Execute the script by double-clicking on `capwin.sh` from the finder or desktop.
+ - First time usage: 
+     - Right-click the mouse to open the macOS security warning
+     - Select the "Open" button
+     - Otherwise, macOS reports a security warning with no option to use `capwin.sh` from finder/desktop
+ - After first time usage:
+     - execute the script by double-clicking on `capwin.sh` from the finder or desktop.
  - Optionally change default control parameters by editing
     `./capwin_support/capwin_vars.sh`
+
+#### Support image for Option 2 (mouse click from desktop or finder)
+
+First-time use right-clicking mouse:
+![First-time use should use mouse double-click to get the "open" button](http://www.biophysicslab.com/wp-content/uploads/2024/04/Fix_First_Time_Use_Right_Mouse_Click.jpg)
 
 ### Dependencies
 
  - `capwin_help.sh` (part of this package: used to display command line options)
  - `capwin_vars.sh` (part of this package: easy access to default variables)
- - screencapture (part of MacOS distribution)
- - sips (part of MacOS distribution)
+ - screencapture (part of macOS distribution)
+ - sips (part of macOS distribution)
 
 ### Test Platforms
 
  - Apple M1 Ultra,
-     - MacOS: Sonoma 14.4, and 
+     - macOS: Sonoma 14.4, and 
      - zsh: 5.2
  - Apple iMac (21.5-inch, Late 2013) i5,
-     - MacOS: Sierra 10.12.6, and 
+     - macOS: Sierra 10.12.6, and 
      - zsh: 5.2
+#### Test Cases
+
+Test `capwin.sh` command line options: 
+
+    ./tests/Test_Cases.txt
 
 ## Help
 
@@ -112,6 +127,8 @@ Ron Fredericks
 
 ## Version History
 
+* 04/01/2024
+    * Fix some nits
 * 03/30/2024
     * Initial Release
 
