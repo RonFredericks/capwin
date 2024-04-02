@@ -18,7 +18,7 @@ Other options for window capture are available to the Mac user, including comman
 
 capwin script has built-in defaults that can be overridden from the command line or by editing the module capwin_vars.sh. Here are some tested combinations:
 
- - Image Format - jpeg,  jpg [default],, tiff, tif, pdf, png, psd
+ - Image Format - jpeg,  jpg [default], tiff, tif, pdf, png, psd
  - Image Compression - low, medium, high, normal [jpeg default], lzw, packbits [tiff default], default
  - Image Density -  72, 144 [default], 300
  - Image Shadow - true, false [default]
