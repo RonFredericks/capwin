@@ -1,0 +1,42 @@
+File: capwin_coding_notes.txt
+Purpose: Document aspects of the capwin script.
+Code version
+
+# Define capwin.sh version for display to user.
+VERSION='Version 1.1.1, Date: 4/21/2024, BiophysicsLab.com'
+
+capwin.sh functions 
+-------------------
+
+# Function: absolute2RelativePathFunc()
+#           Convert absolute file path (/Users.../) to 
+#                   relative file path (~/.../)
+
+# Function: relative2AbsolutePathFunc() {
+#           Convert relative path name (~/.../) to 
+#                   absolute path name (/Users.../).
+
+# Function: fileSuffixUpdate()
+#           Generate file name suffix as a date string.
+#               Note: The date string ensures each image captured 
+#                     has a unique file name.
+
+# Function: filePathTest()
+#           Test for a valid file path name.
+#               Note: function returns silently when path name is valid.
+
+# Function: findInArray()
+#           Find an element in an array.
+
+# Function: displayDone()
+#           Reuse capwin's successful done message
+
+
+capwin.sh modules sourced 
+-------------------------
+
+# Initialize variables controlling image capture and preview display tiling.
+source $(dirname $0)/capwin_support/capwin_vars.sh
+
+# Display command line parameter usage, examples, and references.
+-h|--help) source $(dirname $0)/capwin_support/capwin_help.sh

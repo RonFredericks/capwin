@@ -1,40 +1,71 @@
 #!/bin/zsh
 # File:            capwin.sh
 # Title:           Capture Windows Utility 
-# Purpose:         Quickly capture many windowed images
-# Dependencies:    capwin_help.sh (part of this package:
+# Purpose:         Quickly capture, and optionally display, many images.
+# Dependencies:    capwin_support/capwin_help.sh (part of this package:
 #                                  used to display command line options)
-#                  capwin_vars.sh (part of this package: 
+#                  capwin_support/capwin_vars.sh (part of this package: 
 #                                  easy access to default variables)
+#                  capwin_support/capwin_fcns.sh (part of this package: 
+#                                  reusable functions)
 #                  UNLICENSE.txt (opensource license)
-#                  screencapture (part of macOS distribution)
-#                  sips (part of macOS distribution)
-# Type:            Z Shell (zsh) script
-# Creation date:   4/1/24
+#                  screencapture (flexible image capture tool:
+#                                  part of macOS distribution)
+#                  sips (scriptable image processing system:
+#                                  part of macOS distribution)
+#                  preview (image and PDF viewer with editing features:
+#                                  part of macOS distribution)
+#                  applescript (cascade/tile images displayed with preview:
+#                                  part of macOS distribution)
+# Execution environment:            
+#                  Z Shell (zsh) script
+# Last updated:    06/13/2024
 # Platforms tested: 
 #                  Apple M1 Ultra, 
-#                       macOS: Sonoma 14.4, and 
-#                       zsh: 5.9
+#                       macOS: Sonoma 14.5, and 
+#                       zsh 5.9 (x86_64-apple-darwin23.0)
 #                  Apple iMac (21.5-inch, Late 2013) i5, 
 #                       macOS: Sierra 10.12.6, and 
 #                       zsh: 5.2
 # Developer:       BiophysicsLab.com
 # License:         The Unlicense https://unlicense.org
+###############################################################################
 
 
 ###############################################################################
+#
+# Usage Methodology
+# -----------------
+#
+#   Download capwin.sh and support directory capwin_support into ~/Desktop from
+#       github.
+#   Follow usage option 1 or 2 below for specific details.
+#   Launch capwin.sh script.
+#   Review image configuration, 
+#       (change parameters as needed) - following usage option 1 or option 2.
+#   Capture as many images as needed, 
+#       (such as from streaming video or while documenting application menus).
+#   List each image file captured.
+#   Optionally display each captured image using Apple's Preview utility,
+#       (each image will be tiled on the display in reverse order with an offset 
+#        using applescript).
+#
 # Usage Option 1:
 # ---------------
 #
-# Use script from the terminal with support for image control arguments.
+# Use capwin script from the terminal with support for image control arguments.
 #   Preparation:
-#       Copy script (capwin.sh and capwin_support directory) to /usr/local/bin
-#       Make script executable from terminal.
+#       Copy this script (capwin.sh and capwin_support directory) to:
+#           /usr/local/bin
+#           Example method from terminal (Enter your login password as needed):
+#               sudo cp ~/Desktop/capwin.sh /usr/local/bin
+#               sudo cp -R ~/Desktop/capwin_support /usr/local/bin
+#       Make this script executable from terminal.
 #           chmod +x /usr/local/bin/capwin.sh
 #   Execution examples:
 #       Execute script with default arguments from any directory on terminal, 
 #           type: capwin.sh
-#       Execute script after replacing default dots-per-inch and image format,
+#       Execute script after replacing default image density and image format,
 #           type: capwin.sh -d 72 -i tiff
 #       For help on available control arguments, 
 #           type: capwin.sh --help
@@ -42,16 +73,15 @@
 # Usage Option 2:
 # ---------------
 #
-# Use finder to click and launch script with default options.
+# Use finder to click and launch this script with default options.
 #   Preparation:
-#       Copy script (capwin.sh and capwin_support directory) to ~/Desktop
+#       Copy this script (capwin.sh and capwin_support directory) to ~/Desktop
 #       Note: Using the desktop is my preference for a visual experience, 
-#           but any path will work.
-#       Make script executable from terminal.
+#            but any path will work.
+#       Make this script executable from terminal (same as option 1).
 #           chmod +x /users/ronfred/Desktop/capwin.sh
-#           Notes: ronfred is an example, your user name will be different.
-#                  Don't use tilde (~) as part of path for chmod, 
-#                  it may not work.
+#           Note: ronfred is an example, your user name will be different.
+#           Note: Don't use relative path for chmod, it may not work.
 #       Make script executable from finder/desktop.
 #           Right Mouse Click over capwin.sh
 #           Use Get Info menu option to change default launch application.
@@ -65,11 +95,23 @@
 #       Execute script by double-clicking on capwin.sh from finder or desktop.
 #       Optionally change default control parameters by editing
 #           ./capwin_support/capwin_vars.sh
-
-
+#
+# On termination:
+# ---------------
+#       Script exits normally with signal: exit 0
+#       Script exits with error message and signal: exit 1
 ###############################################################################
-# Define string color definitions (i.e. for enhanced text display using echo).
 
+
+############################### CODE SECTION ##################################
+# First variables defined
+###############################################################################
+
+
+# Define capwin.sh version for display to user.
+VERSION='Version 1.2.1, Date: 6/13/2024, BiophysicsLab.com'
+
+# Define string color definitions (i.e. for enhanced text display using echo).
 NONE='\033[00m'
 RED='\033[01;31m'
 GREEN='\033[01;32m'
@@ -81,270 +123,162 @@ BOLD='\033[1m'
 UNDERLINE='\033[4m'
 
 
+
+############################### CODE SECTION ##################################
+# Initialization
+#   Load capwin functions
+#   Initialize default configuration parameters
+#   Override default configuration parameters from command line interface
+#   Initialize screencapture image names array
+#   Display configuration parameters
 ###############################################################################
-# Function: absolute2RelativePathFunc()
-#           Convert absolute file path to relative file path containing tilde ~
-#           Input: File path with, or without, filename in absolute format.
-#
-#               Example: absolute2RelativePathFunc "/Users/ronfred/Desktop/"
-#
-#           Output: relativePath contains path with user's home directory 
-#                   replaced by tilde (~).
-#
-#               Example (continued): $relativePath contains "~/Desktop/"
-#
-#           On Error: Error message followed by exit 1
-absolute2RelativePathFunc() {
-    local temp="$1"
-    if [[ $# != 1 ]]; then
-        echo "${RED}Error: Call to absolute2RelativePathFunc must"
-        echo "\tinclude one argument (initial file path)${NONE}"
-        exit 1
-    elif [[ $temp[1] != "/" ]]; then
-        echo "${RED}Error: Call to absolute2RelativePathFunc must"
-        echo "\tinclude initial backslash /${NONE}"
-        exit 1
-    fi
-    relativePath="~$temp[${#HOME}+1,-1]"
-}
 
 
 ###############################################################################
-# Function: relative2AbsolutePathFunc() {
-#           Convert tilde (~) shortcut path name to absolute path
-#           Input: A file path name with or without use of tilde (~)
 #
-#               Example: $1 contains "~/Desktop/"
-#
-#           Output: filePath contains absolute path
-#
-#               Example: $filePath contains "/Users/ronfred/Desktop/"
-#
-#           On Error: Error message followed by exit 1
-relative2AbsolutePathFunc() {
-    local temp="$1"
-    if [[ $# != 1 ]]; then
-        echo "${RED}Error: Call to relative2AbsolutePathFunc must include one argument"
-        echo "\tinitial file path:${NONE} $temp"
-        exit 1
-    elif [[ $temp[1,2] != "~/" ]]; then
-        echo "${RED}Error: Call to relative2AbsolutePathFunc must include initial ~/"
-        echo "\tinitial file path:${NONE}  $temp"
-        exit 1
-    elif [[ $temp[-1] != "/" ]]; then
-        echo "${RED}Error: Call to relative2AbsolutePathFunc must include final"
-        echo "\tbackslash /"
-        echo "\tinitial file path:${NONE}  $temp"
-        exit 1
-    elif [[ $temp[1] = "~" ]]; then
-        filePath=$HOME$temp[2,-1]
-    else
-        # Input was in absolute format so just return it unchanged
-        filePath=$temp
-    fi
-}
+# Load capwin functions.
+source $(dirname $0)/capwin_support/capwin_fcns.sh
 
 
 ###############################################################################
-# Function: fileSuffixUpdate()
-#           Generate file name suffix - the unique portion of image file name.
-#           Input: none
-#           Output: - fileSuffix variable should change value with each  
-#                       loop'ed call to screencapture
-#                   - result could be a date (default), or could be loop counter
-#                       with some code changes for example
 #
-#               Example: $fileSuffix contains $(date "+%Y%m%dT%H%M%S")
-fileSuffixUpdate() {
-    fileSuffix=$(date "+%Y%m%dT%H%M%S")
-}
-
-
-###############################################################################
-# Function: filePathTest()
-#           Test for valid file path.
-#           Input: A file path name with or without use of tilde (~)
-#
-#               Example: $1 contains "~/Desktop/"
-#
-#           Output: n/a
-#           On Error: Error message followed by exit 1
-filePathTest(){
-    local temp="$1"
-    local startOK=false
-
-    if [[ $# != 1 ]]; then
-        echo "${RED}Error:${NONE} filePath must include one argument"
-        echo "\tinitial file path: $temp"
-        exit 1
-
-    elif [[ $temp[1,2] = "~/" ]]; then
-      startOK=true
-
-    elif [[ $temp[1] = "/" ]]; then
-      startOK=true
-    fi
-  
-    if [[ $temp[-1] = "/"  && $startOK ]]; then
-      if [[ ! -d $temp ]]; then
-        echo "${RED}Error: file path does not exist (or can't be accessed)."
-        echo "File path argument:${NONE} $temp\n"
-        exit 1
-      else
-        return
-      fi
-    fi
-
-    echo "${RED}Error: filePath argument must include:"
-    echo "\t  a) initial ~/ and final "/" slash, or"
-    echo "\t  b) initial / and final "/" slash."
-    echo "\t  Initial file path:${NONE} $temp\n"
-    exit 1
-}
-
-
-###############################################################################
-# Function: findInArray()
-#           Find an element in an array.
-#           Inputs: String to find
-#                   Array of strings to search
-#           Output: indexFound variable contains numeric index found.
-#           On Error: Index not found error message, followed by exit 1
-#           Note: When called from a sourced module, error message is returned
-#                 in indexFound variable, and exit 1 condition does not stop 
-#                 program execution.
-#                 Instead, on return from findInArray, separate successful 
-#                 numeric index return value from  error message return value
-#                 using a test:
-# 
-#                   if [[ "$indexFound" = <-> ]] 
-#
-#                 after call to findInArray.
-#
-#       Example:
-#
-#           indexFound=$(findInArray $imgFormat imgFormatArray)
-#
-#       Example when called from sourced module:
-#
-#           # The pattern <-> matches any string having only numbers
-#           if [[ "$indexFound" = <-> ]]; then
-#               imgCompression=$imgCompressionArray[$indexFound]
-#           else
-#               echo $indexFound
-#               exit 1
-#           fi
-#
-#       Where:
-#           findInArray is this function
-#           $imgFormat is a string to find
-#           imgFormatArray is an array of strings
-findInArray(){
-    local tempy=(${(P)2[@]})
-    local indexFound="0"
-    for ((i = 1; i <= $#tempy; i++)); do
-        if [[ "$1" = "$tempy[$i]" ]]; then
-            indexFound="$i"
-            break
-        fi
-    done
-    if [[ $indexFound = "0" ]]; then
-        echo "${RED}Error: bad imgFormat value in findInArray:${NONE} $imgFormat"
-        echo ""
-        exit 1
-    fi
-    echo $indexFound
-}
-
-
-###############################################################################
-# Initialize default parameters controlling image capture.
-
+# Initialize default configuration parameters for image capture and preview.
 source $(dirname $0)/capwin_support/capwin_vars.sh
 
 
 ###############################################################################
-# Initialize window selection user interface from command line.
+#
+# Override default variables from command line interface.
+
+errorSaved=""
 
 # Allow parameter passing from terminal app by shifting through all entries.
-while [[ "$#" -gt 0 ]]
-  do case $1 in
+while [[ "$#" -gt 0 ]]; do
+    # Exit case parameter analysis when error was previously found.
+    if [[ ! "$errorSaved" = "" ]]; then
+        break
+    fi
+
+  case $1 in
     -d|--dpiImage) dpiImage="$2"
+    if [[ -z $2 || "${2:0:1}" = "-" ]]; then
+        errorSaved=$1
+    fi
     shift;;
 
     -i|--imgFormat) imgFormat="$2"
+    if [[ -z $2 || "${2:0:1}" = "-" ]]; then
+        errorSaved=$1
+    fi
     shift;;
 
     -c|--imgCompression) imgCompression="$2"
+    if [[ -z $2 || "${2:0:1}" = "-" ]]; then
+        errorSaved=$1
+    fi
     shift;;
 
     -f|--filePath) temp="$2"
-    # Convert entries starting with ~ to absolute path
-    case "$temp" in "~/"*)
-      temp="${HOME}/${temp#"~/"}"
-    esac
-    # Verify path name entry
-    filePathTest "$temp"
-    filePath=$temp
+    if [[ -z $2 || "${2:0:1}" = "-" ]]; then
+        errorSaved=$1
+    else
+        # Note: File path will automatically be in absolute format
+        filePath=$temp
+        filePathTest "$filePath"
+    fi
     shift;;
 
     -p|--filePrefix) filePrefix="$2"
+    if [[ -z $2 || "${2:0:1}" = "-" ]]; then
+        errorSaved=$1
+    fi
     shift;;
 
     -s|--captureWithShadow) captureWithShadow="$2"
+    if [[ -z $2 || "${2:0:1}" = "-" ]]; then
+        errorSaved=$1
+    fi
     shift;;
 
+    # Display command line parameter usage, examples, and references.
     -h|--help) source $(dirname $0)/capwin_support/capwin_help.sh
     exit 0;;
 
-    *) echo "\n${RED}Error: Unknown parameter passed:${NONE} $1"
-    source $(dirname $0)/capwin_support/capwin_help.sh
+    *) echo "${RED}Error: Unknown parameter passed:${NONE} $1"
+       echo "Type ${CYAN}capwin.sh -h${NONE} for help and some examples"
+       echo ""
     exit 1;;
   esac
+  if [ ! -z $errorSaved ]; then
+    echo "${RED}Error: $errorSaved command requires a second parameter. \
+    ${NONE}"
+    echo "Type ${CYAN}capwin.sh -h${NONE} for help and some examples"
+    echo ""
+    exit 1
+  fi
 
   shift
 done
 
 
 ###############################################################################
-# Display configuration parameters on terminal.
-
-echo ""
-echo "${PURPLE}Capture Windows Utility using screencapture and sips${NONE}"
-
-# Generate relativePath variable for display of file path using tilde(~).
-absolute2RelativePathFunc $filePath
-
-echo "${CYAN}Image Configuration: \
-    \n\tformat: $imgFormat \
-    \n\tcompression: $imgCompression \
-    \n\tdpi: $dpiImage \
-    \n\tfilePath: $relativePath \
-    \n\tfilePrefix: $filePrefix \
-    \n\tfileSuffix: $fileSuffix (value changes/image) \
-    \n\tborder shadow: $captureWithShadow \
-    \n\tmore configuration options: type capwin.sh --help
-    ${NONE}"
-
-# Continue capturing images until any key EXCEPT y or Y is pressed.
-read -q ans"?Press [yY] key to capture an image:"
-if [[ "$ans" =~ ^[Yy]$ ]]
-then
- # no-op
-else
- echo ""
- echo "Aborting script..."
- exit
-fi
+#
+# Initialize screencapture image names array.
+screenShotsSaved=()
 
 
 ###############################################################################
-# Main loop to capture multiple images
+#
+# Display configuration parameters.
+echo ""
+echo "${PURPLE}Capture Windows Utility using screencapture, sips and preview${NONE}"
+echo "${PURPLE}${VERSION}${NONE}"
 
-# Initialize array of screencapture image names for display at end of session.
-screenShotsSaved=()
+# Generate relativePath variable for display of file path using tilde(~).
+absolute2RelativePathFunc "$filePath"
+
+echo "Image Capture Configuration: \
+    \n\tFormat: ${CYAN}$imgFormat${NONE} \
+    \n\tCompression: ${CYAN}$imgCompression${NONE} \
+    \n\tDPI: ${CYAN}$dpiImage${NONE} \
+    \n\tFile Path: ${CYAN}$relativePath${NONE} \
+    \n\tFile Prefix: ${CYAN}$filePrefix${NONE} \
+    \n\tUnique Timestamp/Image: ${CYAN}$fileSuffix${NONE} \
+    \n\tBorder Shadow: ${CYAN}$captureWithShadow${NONE} \
+    \n\tMore configuration options: ${CYAN}type capwin.sh --help${NONE}"
 
 echo ""
+# Continue capturing images until any key EXCEPT y or Y is pressed.
+read -q ans"?Press [yY] to capture an image:"
+if [[ ! "$ans" =~ ^[Yy]$ ]]; then
+    echo ""
+    displayDone
+ exit 0
+fi
+
+
+############################### CODE SECTION ##################################
+# Main loop to capture multiple images:
+#   Capture one or more images.
+#   Display all captured image file names.
+#   Optionally preview all captured images using a tiled display.
+#   Let user know that capwin utility is done.
+###############################################################################
+
+
+echo ""
+
+
+###############################################################################
+#
+# Capture one or more images.
+#
+# Handle jpeg and jpg image formats as a special case:
+#   1) DPI setting - use png format to change dpi setting.
+#      Then restore image back to jpeg or jpg format.
+#   2) Image compression - use jpeg format to change compression setting.
+#      Then restore image back from jpeg to jpg format.
+
 while true; do
 
   # Update fileSuffix variable for unique file name with each loop  
@@ -359,7 +293,6 @@ while true; do
     screencapture -w -o $filePath$filePrefix$fileSuffix.$imgFormat
   fi
   workingFileName=$filePath$filePrefix$fileSuffix
-
   
   if [[ "$imgFormat" = "jpg" || "$imgFormat" = "jpeg" ]]; then
 
@@ -409,7 +342,7 @@ while true; do
   
   
   # Continue capturing images until any key EXCEPT y or Y is pressed.
-  read -q  ans"?Press [yY] key to capture an image:"
+  read -q  ans"?Press [yY] to capture an image:"
   echo ""
   if [[ "$ans" =~ ^[Yy]$ ]]
   then
@@ -423,51 +356,161 @@ done
 
 
 ###############################################################################
-# Display all captured screen image names.
+#
+# Display all captured image file names.
 
 if [[ ${#screenShotsSaved} > 0 ]]; then
   echo "${CYAN}List screenshots captured:${NONE}"
   # Loop through array of screenshot names
   for screenImage in $screenShotsSaved; do
     # Convert absolute path to tilde shortcut path
-    absolute2RelativePathFunc $screenImage
+    absolute2RelativePathFunc "$screenImage"
     echo "\t${CYAN}$relativePath${NONE}"
   done
-fi
 
 
 ###############################################################################
-# References:
+#
+# Optionally preview all captured images using a tiled display
+
+  # Open preview windows for each image if y or Y is pressed.
+  read -q  ans"?Press [yY] to preview screenshots (in reverse order):"
+  echo ""
+
+  if [[ "$ans" =~ ^[Yy]$ ]]; then
+
+    # Use applescript to tile images in reverse order (oldest image on top).
+    if [[ ${#screenShotsSaved} > 1 ]]; then
+
+        initialX=$resetX
+        initialY=$resetY
+
+        declare -i cntsPerReset=0
+        declare -i offsetX=$initialX
+        declare -i offsetY=$initialY
+
+        # Kludge to fix applescript first call to "Systems Event" error.
+        # TODO: consider using applescript repeat feature with "System Events".
+        firstPreview=true
+
+        # Loop through array of screenshot names (in reverse order).
+        for ((i=${#screenShotsSaved[@]}; i>0; i--)); do
+            # First image captured will be the last displayed, stacked on top.
+            absolute2RelativePathFunc "${screenShotsSaved[i]}"
+            echo "\t${CYAN}preview $relativePath${NONE}"
+            open -a preview ${screenShotsSaved[i]}
+
+            # Kludge to fix applescript first call to "Systems Event" error.
+            if $firstPreview; then
+                sleep 1
+                firstPreview=false
+            fi
+
+            # Cascade/nudge each previewed image down and to left 
+            #   using applescript.
+            osascript \
+            -e 'on run {offsetX, offsetY}' \
+            -e 'tell application "System Events"' \
+            -e    'tell process "Preview"' \
+            -e        'set position of front window to {offsetX, offsetY}' \
+            -e    'end tell' \
+            -e 'end tell' \
+            -e 'end run' $offsetX $offsetY
+
+            offsetX+=$offsetIncrementX
+            offsetY+=$offsetIncrementY
+            cntsPerReset+=1
+
+            # Reset row/column for another set of cascaded images
+            #   after image count reaches bottom/right edge of monitor.
+            if (( ($offsetX+400)>$screenWidth || \
+                ($offsetY+300)>$screenHeight )); then
+                initialX=$initialX+$resetTileX
+                initialY=$initialY+$resetTileY
+
+                # No more room for another row/colum set of cascaded images,
+                #   so just start over from the begining.
+                if (( $cntsPerReset<$countsPerResetMax )); then
+                    initialX=$resetX
+                    initialY=$resetY
+                fi
+
+                cntsPerReset=0
+                offsetX=$initialX
+                offsetY=$initialY
+            fi # Restart Cascade/nudge
+
+        done # Loop through array of screenshot names
+
+    else
+        # Only one image to preview - so applescript tiling is not needed.
+        absolute2RelativePathFunc "${screenShotsSaved[1]}"
+        echo "\t${CYAN}preview $relativePath${NONE}"
+        open -a preview ${screenShotsSaved[1]}
+    fi # Use applescript to tile images in reverse order
+
+  fi # Preview all captured images
+
+fi # Display all captured screen image names.
+
+###############################################################################
+#
+# Let user know that capwin utility is done.
+
+displayDone
+
+
+############################# REFERENCE SECTION ###############################
+#
+#   Take screenshots or screen recordings on Mac
+#     capwin screen capture utility alternatives
+#     https://support.apple.com/en-gb/guide/mac-help/mh26782/mac
 #
 #   The Z Shell Manual
-#    Original documentation by Paul Falstad, zsh version 5.9, 2022
-#    https://zsh.sourceforge.io/Doc/Release/
-#    https://zsh.sourceforge.io/Doc/Release/Expansion.html#Brace-Expansion
+#     Original documentation by Paul Falstad, zsh version 5.9, 2022
+#     https://zsh.sourceforge.io/Doc/Release/
+#     https://zsh.sourceforge.io/Doc/Release/Expansion.html#Brace-Expansion
+#
+#   Preview User Guide
+#     macOS Sonoma 14
+#     https://support.apple.com/en-gb/guide/preview/welcome/mac
+#
+#   AppleScript Language Guide
+#     2013 Apple Inc.
+#     https://applescriptlibrary.wordpress.com/wp-content/uploads/2013/11/applescriptlanguageguide-2013.pdf
 #    
 #   Capture an image (screencapture) man page
-#    Site developed by Simon Sheppard (Somerset, England)
-#    https://ss64.com/mac/screencapture.html
+#     Site developed by Simon Sheppard (Somerset, England)
+#     https://ss64.com/mac/screencapture.html
 #
 #   Scriptable image processing system (sips) man page
-#    https://ss64.com/mac/sips.html
+#     https://ss64.com/mac/sips.html
 #
 #   macOS image manipulation with sips (SmittyTone Messes with Micros,2019)
-#    https://blog.smittytone.net/2019/10/24/macos-image-manipulation-with-sips/
+#     https://blog.smittytone.net/2019/10/24/macos-image-manipulation-with-sips/
 #
 #   Introduction to Bash and Z Shell: Passing Arguments to a Bash/Zsh Script
-#    Rowan C Nicholls, Google Scholar
-#    https://rowannicholls.github.io/bash/intro/passing_arguments.html
+#     Rowan C Nicholls, Google Scholar
+#     https://rowannicholls.github.io/bash/intro/passing_arguments.html
+#
+#   How to pass a variable in bash (zsh) script to osascript (applescript)
+#     https://apple.stackexchange.com/questions/422677/
+#     https://stackoverflow.com/questions/30400322/
+#
+#   How do I prompt a user for confirmation in bash (or zsh) script
+#     https://stackoverflow.com/questions/1885525/
 #
 #   How Can I Expand A Tilde ~ As Part Of A Variable? (StackExchange, 2017)
-#    https://unix.stackexchange.com/questions/399407
+#     https://unix.stackexchange.com/questions/399407
 #
 #   Shell Style Guide
-#    Authored, revised and maintained by many Googlers, Revision 2.02
-#    https://google.github.io/styleguide/shellguide.html
+#     Authored, revised and maintained by many Googlers, Revision 2.02
+#     https://google.github.io/styleguide/shellguide.html
 #
-#   Robert C. Martin, Clean Code: A Handbook of Agile Software Craftsmanship 
-#    (Pearson Education, Inc. 2009)
-#    https://github.com/martinmurciego/good-books/tree/master -> Clean Code...
+#   Clean Code: A Handbook of Agile Software Craftsmanship 
+#     Robert C. Martin (Pearson Education, Inc. 2009)
+#     https://github.com/martinmurciego/good-books/tree/master -> Clean Code...
 #     
 #   Overview of the Unlicense
 #    https://choosealicense.com/licenses/unlicense/#
+###############################################################################
